@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.ipynb_checkpoints/
+
+# Local agent / editor state
+.claude/
+.DS_Store
+
+# Scratch
+_playground/
