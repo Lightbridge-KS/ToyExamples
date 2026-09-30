@@ -10,4 +10,5 @@ A collection of architecture patterns, each explained through the smallest code 
 
 ## Patterns
 
-- Hub-and-spoke
+- Hub-and-spoke (a smart-home hub and devices)
+- Fleet (agents phoning home to a control plane)
