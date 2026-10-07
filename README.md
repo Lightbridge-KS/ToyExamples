@@ -1,6 +1,6 @@
 # ToyExamples
 
-A collection of architecture patterns, each explained through the smallest code example that still shows the mechanism.
+A collection of architecture and codebase patterns, each explained through the smallest code example that still shows the mechanism.
 
 ## Principles
 
@@ -10,5 +10,15 @@ A collection of architecture patterns, each explained through the smallest code 
 
 ## Patterns
 
+### Architecture patterns
+
+How the parts of a system talk to each other at runtime.
+
 - Hub-and-spoke (a smart-home hub and devices)
 - Fleet (agents phoning home to a control plane)
+
+### Codebase patterns
+
+How the code of one program is arranged, and which way its dependencies point.
+
+- Ports & Adapters (one to-do core, swappable storage and notifiers)
