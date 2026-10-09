@@ -1,0 +1,401 @@
+---
+title: How modules talk inside one program
+subtitle: Compare public API calls with a synchronous pub/sub event bus
+artifact:
+  version: 1
+  layout: article
+---
+
+## Start with the workflow
+
+A customer orders a book. Inventory reserves stock, Orders creates a receipt,
+and Notifications records a confirmation. Checkout decides the order of those
+steps. All four run in one process; communication uses ordinary Python calls.
+
+Run from `codebase-pattern/module-communication`:
+
+```sh
+uv run python -m checkout_toy.demo
+uv run python -m checkout_toy.event_demo
+```
+
+This is a **modular monolith** in miniature: one application, with business
+capabilities separated into modules. The code demonstrates two cooperating
+patterns: **public APIs** hide module internals, and an **orchestrator** coordinates
+the use case across modules. The second version adds **pub/sub**: the workflow
+announces a fact and subscribers react. No framework is needed to see the mechanisms.
+
+## Watch one request
+
+```{mermaid}
+sequenceDiagram
+    participant D as Demo / caller
+    participant C as Checkout
+    participant I as Inventory
+    participant O as Orders
+    participant N as Notifications
+    D->>C: place_order("BOOK", 1)
+    C->>I: reserve("BOOK", 1)
+    I-->>C: None (reserved)
+    C->>O: create("BOOK", 1)
+    O-->>C: OrderReceipt(1, "BOOK", 1)
+    C->>N: send_confirmation(1)
+    N-->>C: None (delivered)
+    C-->>D: OrderReceipt(1, "BOOK", 1)
+```
+
+The entire workflow is this method in `checkout_toy/checkout.py`:
+
+```python
+def place_order(self, sku: str, quantity: int) -> OrderReceipt:
+    self._inventory.reserve(sku, quantity)
+    receipt = self._orders.create(sku, quantity)
+    self._notifications.send_confirmation(receipt.order_id)
+    return receipt
+```
+
+Each call finishes before the next begins. A result travels back to the caller;
+an exception propagates back too. When Inventory raises `InsufficientStock`, Python
+exits this method before Orders or Notifications are called.
+
+Successful output, followed by the rejected second attempt:
+
+```text
+SUCCESS: place one order
+  Inventory.reserve('BOOK', 1) -> reserved
+  Orders.create('BOOK', 1) -> order #1
+  Notifications.send_confirmation(1) -> delivered
+  Checkout returns OrderReceipt(order_id=1, sku='BOOK', quantity=1)
+
+REJECTED: request more stock than remains
+  Inventory raises InsufficientStock: not enough BOOK
+  Checkout stops before creating an order or sending a message
+
+All outcome checks passed.
+```
+
+## The code boundary
+
+Here, a business module is a **Python package** with a public entry point and a
+private implementation. A module in architecture can contain many files; it does
+not have to match one Python `.py` file.
+
+```text
+checkout_toy/
+├── __init__.py
+├── demo.py                  # Composition root: constructs and connects instances
+├── checkout.py              # Orchestrator: coordinates the workflow
+├── event_bus.py             # Synchronous callback fan-out
+├── event_checkout.py        # Alternative workflow: calls plus event publication
+├── event_demo.py            # Subscription wiring and outcome checks
+├── audit.py                 # Extra subscriber module
+├── inventory/
+│   ├── __init__.py          # Exports Inventory and InsufficientStock
+│   └── _impl.py             # Owns stock and reservation rules
+├── orders/
+│   ├── __init__.py          # Exports Orders, OrderReceipt, and OrderPlaced
+│   ├── events.py            # Immutable OrderPlaced event contract
+│   └── _impl.py             # Owns receipts and their IDs
+└── notifications/
+    ├── __init__.py          # Exports Notifications
+    └── _impl.py             # Owns the simulated inbox
+```
+
+Checkout imports through the public entry points:
+
+```python
+from .inventory import Inventory
+from .notifications import Notifications
+from .orders import OrderReceipt, Orders
+```
+
+For example, Inventory's `__init__.py` re-exports its public names. This provides a
+stable import path even if its implementation moves to another private file:
+
+```python
+from ._impl import InsufficientStock, Inventory
+
+__all__ = ["InsufficientStock", "Inventory"]
+```
+
+::: {.callout-note}
+## Privacy is a convention here
+
+`__all__` documents exported names and controls star imports. It is not an access
+control mechanism. Python still permits `inventory._impl` imports and `_stock`
+access. Import rules or architecture checks can enforce a team's boundary policy.
+The boundary in this toy is respected by the code rather than enforced by Python.
+:::
+
+## Runtime calls versus source dependencies
+
+The sequence diagram shows **when calls happen**. This diagram shows **which
+source modules depend on which public APIs**. An arrow means “imports,” not
+“runs before.” The demo's wiring imports are omitted to focus on the workflow.
+
+```{mermaid}
+flowchart TB
+    C["Checkout orchestrator"] --> I["Inventory public API"]
+    C --> O["Orders public API"]
+    C --> N["Notifications public API"]
+    I --> II["Inventory private implementation"]
+    O --> OI["Orders private implementation"]
+    N --> NI["Notifications private implementation"]
+```
+
+The three business packages have no imports of one another. Checkout depends on
+all three, so cross-module sequencing has one explicit home. This moves coupling
+to the coordinator; it does not eliminate coupling. A changed `reserve()` contract
+can still require a Checkout change.
+
+The **composition root** in `demo.py` creates instances and passes them to
+Checkout. The **orchestrator** executes the business sequence. Wiring and workflow
+are different responsibilities even though both know the module APIs.
+
+## What crosses a boundary?
+
+| Boundary | Input | Output / failure | State owned inside |
+|---|---|---|---|
+| Inventory | SKU and quantity | `None`, `InsufficientStock`, or invalid-quantity error | Stock dictionary |
+| Orders | SKU and quantity | `OrderReceipt` or invalid-quantity error | Receipt list and ID allocation |
+| Notifications | Order ID | `None`; this stub always delivers | Simulated inbox |
+| Checkout | SKU and quantity | `OrderReceipt` or propagated exception | References to collaborators |
+
+Orders returns an immutable value rather than its mutable list:
+
+```python
+@dataclass(frozen=True)
+class OrderReceipt:
+    order_id: int
+    sku: str
+    quantity: int
+```
+
+Checkout knows this receipt's public fields. Notifications receives only the order
+ID, so it does not import Orders. The `receipts()` and `confirmations()` queries
+return tuples; callers can inspect outcomes without mutating the internal lists.
+
+## Why introduce an orchestrator?
+
+::: {.panel-tabset}
+### Direct peer calls
+
+An alternative is to make Orders reserve stock and send notifications itself:
+
+```text
+Caller -> Orders -> Inventory
+                 -> Notifications
+```
+
+This is simpler when those collaborators naturally belong to Orders' use case.
+Orders then owns both order behavior and the broader checkout sequence. Adding an
+audit step would require changing Orders or another coordinator around it.
+
+### This toy
+
+```text
+Caller -> Checkout -> Inventory
+                   -> Orders
+                   -> Notifications
+```
+
+Checkout owns the sequence; Orders owns order creation. An audit step can be added
+in Checkout while the three existing business modules keep their implementations.
+The cost is another component and an explicit dependency on each collaborator.
+
+An orchestrator earns its place when the workflow spans independently meaningful
+modules. Introducing one for every trivial function would add ceremony.
+:::
+
+## Where the simplification breaks
+
+The insufficient-stock scenario fails **before any state change**. It does not
+prove checkout is atomic. If Orders fails after reservation, stock stays reserved.
+If Notifications fails after order creation, stock and the order remain, while
+Checkout raises an exception to its caller. There is no automatic rollback.
+
+The toy uses single-threaded, in-memory state. It omits persistence, concurrency,
+payment, retries, transaction management, and real delivery. Those concerns can
+change the design; they are not supplied by the orchestrator pattern itself.
+
+The event-bus version below makes notification and audit reactions indirect.
+It retains explicit calls for stock reservation and order creation. A mediator
+is also related but distinct: it can route requests among collaborators; Checkout
+explicitly owns a particular workflow.
+
+## Pub/sub: announce a fact
+
+The alternative workflow in `event_checkout.py` replaces the explicit notification
+call with a publication:
+
+```python
+def place_order(self, sku: str, quantity: int) -> OrderReceipt:
+    self._inventory.reserve(sku, quantity)
+    receipt = self._orders.create(sku, quantity)
+    self._bus.publish(OrderPlaced(receipt.order_id, receipt.sku, receipt.quantity))
+    return receipt
+```
+
+`reserve()` is a request for required work, with success or failure needed before
+continuing. `OrderPlaced` describes a completed fact. Its publisher does not name
+the modules that should react. The contract lives in `orders/events.py` and is
+exported through Orders' public API:
+
+```python
+@dataclass(frozen=True)
+class OrderPlaced:
+    order_id: int
+    sku: str
+    quantity: int
+```
+
+The event copies scalar values from the receipt. It exposes neither Orders' mutable
+storage nor Inventory's stock. In this toy, **EventCheckout is the publisher**:
+calling `Orders.create()` by itself does not publish anything.
+
+## The whole bus mechanism
+
+`EventBus[OrderPlaced]` is one typed channel. There is no topic registry or routing
+by event type. Every registered callback receives each publication on this channel.
+Python's type hints help static checking; they do not validate payloads at runtime.
+
+The key methods in `event_bus.py` are:
+
+```python
+def subscribe(self, handler: Callable[[Event], None]) -> None:
+    self._handlers.append(handler)
+
+def publish(self, event: Event) -> None:
+    print(f"  EventBus.publish({event!r}) -> {len(self._handlers)} subscriber(s)")
+    for handler in tuple(self._handlers):
+        handler(event)
+```
+
+The tuple snapshots the subscribers for this publication. Each handler is an
+ordinary function call, in registration order. The handler results are ignored;
+exceptions propagate. There is no queue, thread, or background task.
+
+## Where subscriptions live
+
+The composition root in `event_demo.py` connects the publisher and subscribers:
+
+```python
+bus = EventBus[OrderPlaced]()
+bus.subscribe(lambda event: notifications.send_confirmation(event.order_id))
+checkout = EventCheckout(inventory, orders, bus)
+
+# A new reaction: add wiring, with no publisher change.
+audit = Audit()
+bus.subscribe(lambda event: audit.record(event.order_id))
+```
+
+The lambdas are **subscription adapters**: they receive the event and translate it
+into each module's public call. Notifications and Audit need only an order ID, so
+their implementations do not import the event contract. EventCheckout imports
+neither Notifications nor Audit. It still depends on the event schema and the bus;
+the composition root now owns the knowledge of who listens.
+
+```{mermaid}
+flowchart TB
+    C["EventCheckout: publisher"] -->|"reserve"| I["Inventory API"]
+    C -->|"create"| O["Orders API"]
+    C -->|"publish OrderPlaced"| B["Event bus: callback loop"]
+    B -->|"event"| N["Notification subscription adapter"]
+    B -->|"same event"| A["Audit subscription adapter"]
+    N -->|"order_id"| NI["Notifications API"]
+    A -->|"order_id"| AI["Audit API"]
+```
+
+These arrows show **runtime delivery**, not imports. The event demo adds Audit
+after placing the first order: Audit sees only the second order. This bus stores
+subscribers, not a history of events, so subscribing does not replay past facts.
+
+## Synchronous still means waiting
+
+```{mermaid}
+sequenceDiagram
+    participant C as EventCheckout
+    participant B as EventBus
+    participant N as Notification adapter
+    participant A as Audit adapter
+    C->>B: publish(OrderPlaced)
+    B->>N: handler(event)
+    N-->>B: done
+    B->>A: handler(event)
+    A-->>B: done
+    B-->>C: publish returns
+```
+
+Checkout returns after both subscribers finish. A slow subscriber makes checkout
+slow. Pub/sub describes how producers and consumers are connected; it does not
+require asynchronous execution.
+
+The demonstration verifies four cases:
+
+| Scenario | Observable result |
+|---|---|
+| One subscriber | First order sends a notification |
+| Add Audit subscription | Second order sends a notification and records an audit entry |
+| Insufficient stock | No new order, event, notification, or audit entry |
+| First subscriber raises | Order exists and stock is reserved; later Audit handler is skipped; Checkout raises |
+
+The last case is a deliberate **fail-fast** delivery policy. Publishing is not
+atomic: a previous handler's effects would also remain if a later handler failed.
+Changing registration order changes which effects happen before the exception.
+The order-placement fact is already true even if publishing it fails.
+
+Publishing with no subscribers returns normally and stores nothing. There are no
+retries, acknowledgements, durable delivery, replay, or rollback. Repeated
+publication invokes subscribers again; there is no deduplication. “Optional
+reaction” here means the core placement logic does not require the subscriber's
+result; this synchronous bus can still propagate its failure to the caller.
+
+## Compare the two versions
+
+| Question | Direct API version | Pub/sub version |
+|---|---|---|
+| Who knows Notifications? | Checkout and composition root | Subscription adapter in composition root |
+| Add Audit? | Add an explicit call and wiring | Add a subscription and wiring |
+| Where is the sequence visible? | Checkout's method | Checkout plus subscription registration |
+| What couples the modules? | Public method contracts | Public method contracts plus event schema |
+| Does Checkout wait for delivery? | Yes | Yes, with this synchronous bus |
+| Does a delivery failure undo the order? | No | No |
+
+The bus makes additional reactions easy to attach. It also makes the full execution
+path less visible in the publisher. Keep required decisions explicit; events are
+useful when a fact can have independent reactions. Choosing an asynchronous,
+durable bus would introduce another set of timing and delivery decisions.
+
+## Experiments with direct calls
+
+1. **Change storage without changing the contract.** Replace Inventory's dictionary
+   with a private list of stock rows. Preserve `reserve()` and `available()` and
+   rerun the demo. Checkout and the public imports should need no changes.
+2. **Add one collaborator.** Reuse the Audit module's `record(order_id)` method.
+   Wire it in the original demo and call it from Checkout. Notice that Inventory, Orders,
+   and Notifications need no edits, but the orchestrator does.
+3. **Fail late.** Make `send_confirmation()` raise `RuntimeError` before recording
+   delivery. Catch it in the demo and inspect stock, receipts, and confirmations.
+   Explain why a failed call can coexist with a created order. Restore the stub
+   afterward so the original demo checks pass again.
+
+## Experiments with the event bus
+
+1. **Remove the notification subscription.** Checkout still creates the order;
+   only Audit reacts. Update the demo's notification assertions to match the
+   intentionally changed wiring.
+2. **Swap the failing and Audit subscriptions.** Audit now records before delivery
+   fails, while Checkout still raises. Compare this with the original failure
+   scenario's empty audit log, then restore the ordering and checks.
+3. **Publish the same event twice.** Both callbacks run twice. Explain why retries
+   need a deduplication or idempotency policy when effects matter.
+
+## Connect it to the existing toy
+
+Ports & Adapters shows business rules separated from interchangeable technology.
+This example shows peer business capabilities coordinated through public contracts.
+The patterns can coexist: Inventory could use a storage port internally while
+Checkout continues calling the same Inventory public API.
+
+For a framework implementation of module APIs, private internals, and published
+events, see [Spring Modulith's module model](https://docs.spring.io/spring-modulith/reference/1.1/fundamentals.html).

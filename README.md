@@ -22,3 +22,4 @@ How the parts of a system talk to each other at runtime.
 How the code of one program is arranged, and which way its dependencies point.
 
 - Ports & Adapters (one to-do core, swappable storage and notifiers)
+- [Module communication](codebase-pattern/module-communication/README.md) (public APIs, checkout orchestration, and a pub/sub event bus)
