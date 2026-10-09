@@ -38,7 +38,7 @@ File and class names match markitdown's, so each toy piece maps onto a real one:
 | `_stream_info.py` | [`_stream_info.py`][r-stream] | same |
 | `_base_converter.py` | [`_base_converter.py`][r-base] | same contract; `text_content` alias cut |
 | `_exceptions.py` | [`_exceptions.py`][r-exc] | same hierarchy |
-| `_markitdown.py` | [`_markitdown.py`][r-convert] (783 lines) | `file:`/`http:` doors, global LLM options, deprecated args cut |
+| `_markitdown.py` | [`_markitdown.py`][r-convert] (783 lines) | `file:`/`http:` doors, global LLM options, deprecated args cut; plugin list cached with `@cache`, not a module global |
 | `_sniff()` | [magika][r-guesses], an ML file-type model | magic bytes + "does it decode?" |
 | `converters.py` | `converters/`, about 20 files | 4 converters, format libraries swapped for stdlib |
 | `minimd_sample_plugin/` | [`markitdown-sample-plugin`][r-sample] + [`markitdown-ocr`][r-ocr] | new format + shadowing, one module |

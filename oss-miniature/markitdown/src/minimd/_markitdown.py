@@ -15,6 +15,7 @@ import re
 import traceback
 import urllib.parse
 from dataclasses import dataclass
+from functools import cache
 from importlib.metadata import entry_points
 from pathlib import Path
 from typing import Any, BinaryIO
@@ -35,25 +36,25 @@ log = logging.getLogger(__name__)  # the dispatch trace, at DEBUG level
 PRIORITY_SPECIFIC_FILE_FORMAT = 0.0  # .csv, .yaml, ...
 PRIORITY_GENERIC_FILE_FORMAT = 10.0  # catch-alls: any text, any zip
 
-_plugins: list[Any] | None = None  # None until the first enable_plugins()
 
-
+# @cache: the first enable_plugins() loads, every later one reuses the list.
+# The list is stored only once it is complete. (markitdown keeps it in a module
+# global, set to [] before the loop, so a second thread can read it half-filled.)
+@cache
 def _load_plugins() -> list[Any]:
     """Find plugins through installed package metadata, once per process.
 
     A plugin that fails to import is skipped with a warning: a broken
     third-party package never takes the host down.
     """
-    global _plugins
-    if _plugins is None:
-        _plugins = []
-        for entry_point in entry_points(group="minimd.plugin"):
-            try:
-                _plugins.append(entry_point.load())
-            except Exception:
-                tb = traceback.format_exc()
-                warn(f"Plugin {entry_point.name!r} failed to load, skipping:\n{tb}")
-    return _plugins
+    plugins = []
+    for entry_point in entry_points(group="minimd.plugin"):
+        try:
+            plugins.append(entry_point.load())
+        except Exception:
+            tb = traceback.format_exc()
+            warn(f"Plugin {entry_point.name!r} failed to load, skipping:\n{tb}")
+    return plugins
 
 
 @dataclass(frozen=True)
