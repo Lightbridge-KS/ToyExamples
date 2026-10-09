@@ -1,0 +1,28 @@
+[project]
+name = "minimd"
+version = "0.1.0"
+description = "MarkItDown in miniature: the converter registry and dispatch loop of microsoft/markitdown"
+authors = [
+    { name = "Lightbridge-KS", email = "ki11ip0.s.a.s@gmail.com" }
+]
+requires-python = ">=3.10"
+dependencies = []  # the core needs nothing beyond the standard library
+
+[project.optional-dependencies]
+# `pip install minimd[yaml]` lights up YamlConverter. Without it, minimd still
+# imports and works; only .yaml conversion falls back (see YamlConverter).
+yaml = ["pyyaml"]
+
+# The plugin's whole wiring. In real life this table lives in the *plugin's*
+# own pyproject.toml (a separate package); here both packages share one project
+# to keep the toy small. minimd never imports minimd_sample_plugin by name: it
+# finds it here, through installed package metadata.
+[project.entry-points."minimd.plugin"]
+sample_plugin = "minimd_sample_plugin"
+
+[build-system]
+requires = ["uv_build>=0.11.8,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = ["minimd", "minimd_sample_plugin"]

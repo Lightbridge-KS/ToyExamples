@@ -23,3 +23,9 @@ How the code of one program is arranged, and which way its dependencies point.
 
 - Ports & Adapters (one to-do core, swappable storage and notifiers)
 - [Module communication](codebase-pattern/module-communication/README.md) (public APIs, checkout orchestration, and a pub/sub event bus)
+
+### OSS Miniature
+
+How the core architecture skeleton of OSS application and libraries were build, demonstrate using miniature toy. 
+
+- [MarkItDown](oss-miniature/markitdown/README.md) (any file to Markdown through one priority-ordered converter registry, with entry-point plugins)

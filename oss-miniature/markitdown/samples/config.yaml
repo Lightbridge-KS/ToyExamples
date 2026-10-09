@@ -1,0 +1,4 @@
+model: ct-brain-hemorrhage
+version: 2.1
+threshold: 0.7
+labels: [ich, sah, sdh]
