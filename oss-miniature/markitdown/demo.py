@@ -1,9 +1,10 @@
 """Seven scenes through minimd's dispatch loop, with the trace switched on.
 
-uv run --exact demo.py                # no extras installed
-uv run --exact --extra yaml demo.py   # as if `pip install minimd[yaml]`: scene 5 changes
+uv run --exact demo.py                   # minimd alone: scene 7 finds no plugin
+uv run --exact --extra plugins demo.py   # + the plugin package: scene 7 changes
+uv run --exact --extra yaml demo.py      # + minimd[yaml]: scene 5 changes
 
-(--exact makes uv remove pyyaml again when the extra isn't asked for.)
+(--exact makes uv remove a package again when its extra isn't asked for.)
 """
 
 import inspect
@@ -13,9 +14,11 @@ import sys
 import urllib.parse
 import zipfile
 from dataclasses import asdict
+from importlib.metadata import entry_points
 from pathlib import Path
 
 from minimd import MarkItDown, MarkItDownException, StreamInfo
+from minimd.plugin_api import ENTRY_POINT_GROUP
 
 SAMPLES = Path(__file__).parent / "samples"
 
@@ -70,7 +73,17 @@ def main() -> None:
         md, io.BytesIO(b"\x00\xff\xfe\xfd"), stream_info=StreamInfo(extension=".bin")
     )
 
-    scene("7 · Plugins: opt-in, discovered, prioritized")
+    scene("7 · Plugins: a separate package, discovered, opted into")
+    # minimd knows only the group name. The entry point comes from the plugin
+    # package's own metadata, so installing that package is the whole wiring.
+    found = entry_points(group=ENTRY_POINT_GROUP)
+    for ep in found:
+        print(f"entry point {ep.name!r} → {ep.value}, installed by {ep.dist.name}")
+    if not found:
+        print(
+            "no plugin installed: rerun with `uv run --exact --extra plugins demo.py`"
+        )
+        return
     with_plugins = MarkItDown(enable_plugins=True)
     # The plugin's SniffingCsvConverter (-1.0) shadows the built-in CsvConverter (0.0).
     convert(md, SAMPLES / "supplies.csv")

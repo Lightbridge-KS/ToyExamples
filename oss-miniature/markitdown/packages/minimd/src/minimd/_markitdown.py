@@ -29,31 +29,41 @@ from ._exceptions import (
 )
 from ._stream_info import StreamInfo
 from .converters import CsvConverter, PlainTextConverter, YamlConverter, ZipConverter
+from .plugin_api import (
+    ENTRY_POINT_GROUP,
+    PRIORITY_GENERIC_FILE_FORMAT,
+    PRIORITY_SPECIFIC_FILE_FORMAT,
+    Plugin,
+)
 
 log = logging.getLogger(__name__)  # the dispatch trace, at DEBUG level
-
-# Lower values are tried first.
-PRIORITY_SPECIFIC_FILE_FORMAT = 0.0  # .csv, .yaml, ...
-PRIORITY_GENERIC_FILE_FORMAT = 10.0  # catch-alls: any text, any zip
 
 
 # @cache: the first enable_plugins() loads, every later one reuses the list.
 # The list is stored only once it is complete. (markitdown keeps it in a module
 # global, set to [] before the loop, so a second thread can read it half-filled.)
 @cache
-def _load_plugins() -> list[Any]:
+def _load_plugins() -> list[Plugin]:
     """Find plugins through installed package metadata, once per process.
 
-    A plugin that fails to import is skipped with a warning: a broken
-    third-party package never takes the host down.
+    A plugin that fails to import, or doesn't fit the Plugin protocol, is
+    skipped with a warning: a broken third-party package never takes the
+    host down.
     """
-    plugins = []
-    for entry_point in entry_points(group="minimd.plugin"):
+    plugins: list[Plugin] = []
+    for entry_point in entry_points(group=ENTRY_POINT_GROUP):
         try:
-            plugins.append(entry_point.load())
+            plugin = entry_point.load()
         except Exception:
             tb = traceback.format_exc()
             warn(f"Plugin {entry_point.name!r} failed to load, skipping:\n{tb}")
+            continue
+        # At run time the Protocol checks the name only, not the signature.
+        # The signature is the type checker's job, on the plugin's side.
+        if not isinstance(plugin, Plugin):
+            warn(f"Plugin {entry_point.name!r} has no register_converters(), skipping")
+            continue
+        plugins.append(plugin)
     return plugins
 
 
@@ -98,7 +108,8 @@ class MarkItDown:
         self.register_converter(YamlConverter())
 
     def enable_plugins(self, **kwargs: Any) -> None:
-        # The entire plugin interface: a module with register_converters(md).
+        # The entire plugin interface (plugin_api.Plugin): one call, with this
+        # MarkItDown as the plugin's ConverterRegistry.
         for plugin in _load_plugins():
             try:
                 plugin.register_converters(self, **kwargs)

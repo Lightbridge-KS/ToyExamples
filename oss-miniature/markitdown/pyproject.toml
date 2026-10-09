@@ -1,28 +1,34 @@
 [project]
-name = "minimd"
+name = "minimd-demo"
 version = "0.1.0"
-description = "MarkItDown in miniature: the converter registry and dispatch loop of microsoft/markitdown"
+description = "The app: installs minimd, optionally its plugin, and opts in"
 authors = [
     { name = "Lightbridge-KS", email = "ki11ip0.s.a.s@gmail.com" }
 ]
 requires-python = ">=3.10"
-dependencies = []  # the core needs nothing beyond the standard library
+dependencies = ["minimd"]
 
 [project.optional-dependencies]
-# `pip install minimd[yaml]` lights up YamlConverter. Without it, minimd still
-# imports and works; only .yaml conversion falls back (see YamlConverter).
-yaml = ["pyyaml"]
+# What the app's user would pip install. Each extra changes one demo scene.
+yaml = ["minimd[yaml]"]               # scene 5: the host's own optional dependency
+plugins = ["minimd-sample-plugin"]    # scene 7: installing the package is the wiring
 
-# The plugin's whole wiring. In real life this table lives in the *plugin's*
-# own pyproject.toml (a separate package); here both packages share one project
-# to keep the toy small. minimd never imports minimd_sample_plugin by name: it
-# finds it here, through installed package metadata.
-[project.entry-points."minimd.plugin"]
-sample_plugin = "minimd_sample_plugin"
+[dependency-groups]
+dev = [
+    "ipykernel>=7.3.0",
+]
+typecheck = [
+    "mypy>=2.4.0",
+    "types-pyyaml>=6.0.12.20260906",
+]
 
-[build-system]
-requires = ["uv_build>=0.11.8,<0.12.0"]
-build-backend = "uv_build"
+[tool.uv]
+package = false  # an app, not a library: nothing to build or publish
 
-[tool.uv.build-backend]
-module-name = ["minimd", "minimd_sample_plugin"]
+# Two vendors' packages, side by side for development: one lockfile, one venv.
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.uv.sources]
+minimd = { workspace = true }
+minimd-sample-plugin = { workspace = true }

@@ -8,12 +8,9 @@ from ._exceptions import (
     MissingDependencyException,
     UnsupportedFormatException,
 )
-from ._markitdown import (
-    PRIORITY_GENERIC_FILE_FORMAT,
-    PRIORITY_SPECIFIC_FILE_FORMAT,
-    MarkItDown,
-)
+from ._markitdown import MarkItDown
 from ._stream_info import StreamInfo
+from .plugin_api import PRIORITY_GENERIC_FILE_FORMAT, PRIORITY_SPECIFIC_FILE_FORMAT
 
 __all__ = [
     "MarkItDown",

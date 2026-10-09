@@ -1,0 +1,26 @@
+[project]
+name = "minimd-sample-plugin"
+version = "0.1.0"
+description = "A third-party plugin for minimd: .ini files, and a CSV converter that sniffs the delimiter"
+authors = [
+    { name = "Lightbridge-KS", email = "ki11ip0.s.a.s@gmail.com" }
+]
+requires-python = ">=3.10"
+# The contract's version is the host's version range: the resolver refuses an
+# incompatible minimd before any plugin code runs.
+dependencies = ["minimd>=0.1,<0.2"]
+
+# The plugin's whole wiring. minimd never imports minimd_sample_plugin by name:
+# installing this package writes this entry point into its metadata, and
+# minimd finds it there.
+[project.entry-points."minimd.plugin"]
+sample_plugin = "minimd_sample_plugin"
+
+[build-system]
+requires = ["uv_build>=0.11.8,<0.12.0"]
+build-backend = "uv_build"
+
+# Development only: resolve minimd from the sibling workspace package. A built
+# wheel keeps just the range above.
+[tool.uv.sources]
+minimd = { workspace = true }
