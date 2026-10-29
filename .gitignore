@@ -4,6 +4,10 @@ __pycache__/
 .venv/
 .ipynb_checkpoints/
 
+# .NET
+bin/
+obj/
+
 # Local agent / editor state
 .claude/
 .DS_Store

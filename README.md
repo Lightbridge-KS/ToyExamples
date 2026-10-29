@@ -16,6 +16,7 @@ How the parts of a system talk to each other at runtime.
 
 - Hub-and-spoke (a smart-home hub and devices)
 - Fleet (agents phoning home to a control plane)
+- [DICOM retrieve](architecture-patterns/dicom-retrieve/README.md) (C-GET vs C-MOVE behind one Strategy, a fallback Decorator, and a Mediator that routes inbound C-STOREs; C#)
 
 ### Codebase patterns
 
