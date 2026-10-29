@@ -7,7 +7,7 @@ using ToyRetrieve.Receiving;
 using ToyRetrieve.Retrievers;
 using ToyRetrieve.Simulated;
 
-const string MyAe = "RAMAAI";
+const string MyAe = "MY_APP";
 const string ChestCt = "1.2.3.100";
 const string BrainMr = "1.2.3.200";
 

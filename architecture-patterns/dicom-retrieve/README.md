@@ -19,7 +19,7 @@ that so the *mechanism* is the only thing left to read.
                   │        │              (C-GET, else C-MOVE)
           CGetRetriever  CMoveRetriever
              │              │  1. router.Register(msgId, sink)
-             │              │  2. pacs.CMove(dest = "RAMAAI")
+             │              │  2. pacs.CMove(dest = "MY_APP")
              │              ▼
              │           PACS ──C-STORE (new association)──▶ StoreScp
              │                                                  │
@@ -56,8 +56,8 @@ the C-STOREs interleave, and the router still delivers each to the right sink:
 
 ```
 === 4. Two C-MOVEs at once on PACS-B ===
-  [PACS-B] C-MOVE 1.2.3.100 (msgId=3): dialing 'RAMAAI' on a NEW association
-  [PACS-B] C-MOVE 1.2.3.200 (msgId=4): dialing 'RAMAAI' on a NEW association
+  [PACS-B] C-MOVE 1.2.3.100 (msgId=3): dialing 'MY_APP' on a NEW association
+  [PACS-B] C-MOVE 1.2.3.200 (msgId=4): dialing 'MY_APP' on a NEW association
     [StoreScp] C-STORE in: 1.2.3.200.1 (moveMsgId=4)
       [Sink 1.2.3.200] got 1.2.3.200.1 ✓
     [StoreScp] C-STORE in: 1.2.3.100.1 (moveMsgId=3)
@@ -74,7 +74,7 @@ the C-STOREs interleave, and the router still delivers each to the right sink:
 | `StoreScp` | `DicomServerFactory.Create<T>(port)`, where `T : DicomService, IDicomServiceProvider, IDicomCStoreProvider`. Start it at app startup, *before* any move. |
 | `CStoreRequest.MoveOriginatorMessageId` | Tag **(0000,1031)** in the incoming C-STORE command set. |
 | `_lastMessageId` counter | The C-MOVE request's own `MessageID`. |
-| `RegisterMoveDestination(ae, scp)` | The PACS admin adding "AE `RAMAAI` = your-ip:port" to the PACS config. |
+| `RegisterMoveDestination(ae, scp)` | The PACS admin adding "AE `MY_APP` = your-ip:port" to the PACS config. |
 
 ## Real-world details the toy skips
 
