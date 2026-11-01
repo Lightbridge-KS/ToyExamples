@@ -10,4 +10,14 @@
     <Version>3.0.0</Version>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- UI only. No code-first generator: the docs come from the contract files, not from this code. -->
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.1.7" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Ship the contracts next to the binary so Swagger UI can render them from any working directory. -->
+    <Content Include="..\contracts\*.yaml" Link="contracts\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

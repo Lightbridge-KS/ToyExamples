@@ -1,5 +1,7 @@
 using Gateway.Api;
 using Gateway.Domain;
+using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.Extensions.FileProviders;
 
 // ─────────────────────────────────────────────────────────────────────
 //  Studies Gateway — release 3.0.0
@@ -18,7 +20,24 @@ builder.Services.AddProblemDetails();
 
 var app = builder.Build();
 
-app.MapGet("/", () => "Studies Gateway 3.0.0 — contracts: v1.1.0 (/api/v1, deprecated), v2.0.0 (/api/v2)");
+// Swagger UI renders the contract YAML files themselves (not docs generated from code),
+// so what you read in the browser is exactly what the clients were generated from.
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(Path.Combine(AppContext.BaseDirectory, "contracts")),
+    RequestPath = "/contracts",
+    ContentTypeProvider = new FileExtensionContentTypeProvider
+    {
+        Mappings = { [".yaml"] = "application/yaml" }
+    }
+});
+app.UseSwaggerUI(ui =>
+{
+    ui.SwaggerEndpoint("/contracts/studies-api.v2.0.0.yaml", "v2 · contract 2.0.0 (current)");
+    ui.SwaggerEndpoint("/contracts/studies-api.v1.1.0.yaml", "v1 · contract 1.1.0 (deprecated)");
+});
+
+app.MapGet("/", () => "Studies Gateway 3.0.0 — contracts: v1.1.0 (/api/v1, deprecated), v2.0.0 (/api/v2) — docs: /swagger");
 app.MapStudiesV1();
 app.MapStudiesV2();
 

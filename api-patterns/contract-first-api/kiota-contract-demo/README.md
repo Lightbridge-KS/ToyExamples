@@ -66,6 +66,12 @@ dotnet run --project gateway   # terminal 1 → http://localhost:5080
 dotnet run --project client    # terminal 2
 ```
 
+With the gateway running, open <http://localhost:5080/swagger> for Swagger UI. It renders
+the contract YAML files themselves (`contracts/studies-api.v1.1.0.yaml` and
+`studies-api.v2.0.0.yaml`, chosen from the dropdown), not docs generated from the gateway
+code. So the page shows what the clients were built from, and "Try it out" shows what the
+gateway actually returns.
+
 ## What you will see
 
 ```
