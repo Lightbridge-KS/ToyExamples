@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Gateway</RootNamespace>
+
+    <!-- The gateway's OWN release version. Contract versions live in Api/OpenApiSetup.cs. -->
+    <Version>3.1.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Generates the OpenAPI documents FROM this code. -->
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.10" />
+    <!-- UI only: it renders the documents above and generates nothing itself. -->
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.1.7" />
+  </ItemGroup>
+
+</Project>

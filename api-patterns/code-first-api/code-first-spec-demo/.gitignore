@@ -1,0 +1,6 @@
+bin/
+obj/
+.kiota.log
+.spec-out/
+gateway.log
+*.bak

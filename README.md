@@ -23,6 +23,7 @@ How the parts of a system talk to each other at runtime.
 How independently released programs stay compatible across versions.
 
 - [Contract-first API](api-patterns/contract-first-api/kiota-contract-demo/README.md) (one OpenAPI contract between a gateway and its clients: Kiota-generated tolerant readers, an oasdiff breaking-change gate, deprecation headers; C#)
+- [Code-first API](api-patterns/code-first-api/code-first-spec-demo/README.md) (the gateway code generates the OpenAPI spec, a committed snapshot that an oasdiff and drift gate checks in CI; the mirror of contract-first; C#)
 
 ### Codebase patterns
 
