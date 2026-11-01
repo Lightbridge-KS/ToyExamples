@@ -1,0 +1,4 @@
+bin/
+obj/
+.kiota.log
+gateway.log

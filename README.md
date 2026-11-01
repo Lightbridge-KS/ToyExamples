@@ -1,6 +1,6 @@
 # ToyExamples
 
-A collection of architecture, codebase and design patterns, each explained through the smallest code example that still shows the mechanism.
+A collection of architecture, API, codebase and design patterns, each explained through the smallest code example that still shows the mechanism.
 
 ## Principles
 
@@ -17,6 +17,12 @@ How the parts of a system talk to each other at runtime.
 - Hub-and-spoke (a smart-home hub and devices)
 - Fleet (agents phoning home to a control plane)
 - [DICOM retrieve](architecture-patterns/dicom-retrieve/README.md) (C-GET vs C-MOVE behind one Strategy, a fallback Decorator, and a Mediator that routes inbound C-STOREs; C#)
+
+### API patterns
+
+How independently released programs stay compatible across versions.
+
+- [Contract-first API](api-patterns/contract-first-api/kiota-contract-demo/README.md) (one OpenAPI contract between a gateway and its clients: Kiota-generated tolerant readers, an oasdiff breaking-change gate, deprecation headers; C#)
 
 ### Codebase patterns
 

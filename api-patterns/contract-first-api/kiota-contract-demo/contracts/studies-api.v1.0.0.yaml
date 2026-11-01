@@ -1,0 +1,63 @@
+# ─────────────────────────────────────────────────────────────────────
+#  Studies API — contract v1.0.0  (the ORIGINAL v1)
+#
+#  This file is the single source of truth between the two repos.
+#  The gateway implements it; the client is GENERATED from it (Kiota).
+# ─────────────────────────────────────────────────────────────────────
+openapi: 3.0.3
+info:
+  title: Studies API
+  version: 1.0.0
+servers:
+  - url: http://localhost:5080
+paths:
+  /api/v1/studies:
+    get:
+      operationId: listStudies
+      summary: List imaging studies
+      responses:
+        '200':
+          description: All studies
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Study' }
+  /api/v1/studies/{id}:
+    get:
+      operationId: getStudy
+      summary: Get one imaging study
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: The study
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Study' }
+        '404':
+          description: Study not found
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+components:
+  schemas:
+    Study:
+      type: object
+      required: [id, patientName, modality]
+      properties:
+        id:          { type: string, example: S-001 }
+        patientName: { type: string, example: Somchai Jaidee }
+        modality:    { $ref: '#/components/schemas/Modality' }
+    Modality:
+      type: string
+      description: >-
+        OPEN set. New values may be added in a MINOR version,
+        so clients MUST tolerate values they do not know.
+      enum: [CT, MR, US, XR]
+    Problem:
+      type: object
+      properties:
+        title:  { type: string }
+        status: { type: integer }
+        detail: { type: string }
