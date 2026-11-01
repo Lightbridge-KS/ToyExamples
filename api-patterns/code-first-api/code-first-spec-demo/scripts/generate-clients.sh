@@ -9,14 +9,16 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+source scripts/lib.sh   # SPEC_FORMAT: json | yaml (see contracts/spec.env)
+
 KIOTA="${KIOTA:-dotnet kiota}"
 
 for doc in v1 v2; do
   ns="StudiesV${doc#v}"
-  echo "▶ contracts/studies-$doc.json  →  client/Generated/$ns"
+  echo "▶ contracts/studies-$doc.$SPEC_FORMAT  →  client/Generated/$ns"
   $KIOTA generate \
     --language CSharp \
-    --openapi "contracts/studies-$doc.json" \
+    --openapi "contracts/studies-$doc.$SPEC_FORMAT" \
     --class-name "${ns}Client" \
     --namespace-name "ClientApp.Generated.$ns" \
     --output "client/Generated/$ns" \

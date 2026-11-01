@@ -9,7 +9,9 @@ using Gateway.Domain;
 //  GENERATED from it and committed to contracts/ as a reviewed snapshot:
 //
 //    GET /openapi/v1.json   → contracts/studies-v1.json   (contract 1.1.0)
+//    GET /openapi/v1.yaml   → contracts/studies-v1.yaml   (same document)
 //    GET /openapi/v2.json   → contracts/studies-v2.json   (contract 2.0.0)
+//    GET /openapi/v2.yaml   → contracts/studies-v2.yaml   (same document)
 // ─────────────────────────────────────────────────────────────────────
 
 var builder = WebApplication.CreateBuilder(args);
@@ -27,7 +29,9 @@ builder.Services.AddStudiesOpenApi();
 
 var app = builder.Build();
 
-app.MapOpenApi();   // serves /openapi/{documentName}.json
+// The route pattern's extension picks the format. Both serve the same in-memory document.
+app.MapOpenApi();                                // /openapi/{documentName}.json
+app.MapOpenApi("/openapi/{documentName}.yaml");  // /openapi/{documentName}.yaml
 
 // Swagger UI renders the documents GENERATED from this code, so the page always shows
 // what the running gateway really exposes (and what export-spec.sh will snapshot).
@@ -37,7 +41,7 @@ app.UseSwaggerUI(ui =>
     ui.SwaggerEndpoint("/openapi/v1.json", $"v1 · contract {OpenApiSetup.V1ContractVersion}");
 });
 
-app.MapGet("/", () => "Studies Gateway 3.1.0 (code-first) — specs at /openapi/v1.json, /openapi/v2.json — docs: /swagger")
+app.MapGet("/", () => "Studies Gateway 3.1.0 (code-first) — specs at /openapi/{v1,v2}.{json,yaml} — docs: /swagger")
    .ExcludeFromDescription();
 app.MapStudiesV1();
 app.MapStudiesV2();

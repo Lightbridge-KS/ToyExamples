@@ -4,6 +4,9 @@
 #
 #  Usage:  ./scripts/export-spec.sh [out-dir]      (default: contracts/)
 #
+#  Always exports BOTH formats (.json and .yaml) of both versions. Which
+#  one the gate and Kiota read is set in contracts/spec.env.
+#
 #  Developer workflow: change C# → run this → commit code AND contracts/
 #  together, so reviewers see the API change in the pull request diff.
 # ─────────────────────────────────────────────────────────────────────
@@ -22,6 +25,8 @@ trap 'kill "$PID" 2>/dev/null || true' EXIT
 for _ in $(seq 1 40); do curl -fs "$URL/" > /dev/null && break; sleep 0.25; done
 
 for doc in v1 v2; do
-  curl -fsS "$URL/openapi/$doc.json" -o "$OUT/studies-$doc.json"
-  echo "  exported $OUT/studies-$doc.json"
+  for ext in json yaml; do
+    curl -fsS "$URL/openapi/$doc.$ext" -o "$OUT/studies-$doc.$ext"
+    echo "  exported $OUT/studies-$doc.$ext"
+  done
 done

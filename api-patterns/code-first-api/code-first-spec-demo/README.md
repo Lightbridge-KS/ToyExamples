@@ -10,8 +10,8 @@ committed as a snapshot, and CI gates every change against it.
 ```
  kiota-contract-demo (contract-first)      code-first-spec-demo (this one)
  ────────────────────────────────────      ─────────────────────────────────────
- YAML ──hand-copy──► gateway C#            gateway C# ──export──► JSON snapshot
- YAML ──Kiota──────► client                JSON snapshot ──Kiota──► client
+ YAML ──hand-copy──► gateway C#            gateway C# ──export──► JSON/YAML snapshot
+ YAML ──Kiota──────► client                JSON/YAML snapshot ──Kiota──► client
  gap: is the C# faithful? (unchecked)      gate: oasdiff + drift check in CI
 ```
 
@@ -21,13 +21,13 @@ committed as a snapshot, and CI gates every change against it.
   developer edits gateway C#
           │
           ▼
-  ./scripts/export-spec.sh ──► contracts/studies-v1.json ─┐  commit code + snapshot
-          │                    contracts/studies-v2.json  │  TOGETHER, so reviewers
+  ./scripts/export-spec.sh ──► contracts/studies-v1.{json,yaml} ─┐  commit code + snapshot
+          │                    contracts/studies-v2.{json,yaml}  │  TOGETHER, so reviewers
           │                                               │  see the API diff in the PR
           ▼                                               ▼
   PR CI: ./scripts/api-gate.sh                       client repo:
     1. export a fresh spec from the PR's code          ./scripts/generate-clients.sh
-    2. BREAKING?  committed → fresh   (oasdiff)        (Kiota, from the committed JSON;
+    2. BREAKING?  committed → fresh   (oasdiff)        (Kiota, from the committed spec;
     3. DRIFT?     committed ≠ fresh   (cmp)             never needs the gateway source)
 ```
 
@@ -52,7 +52,8 @@ Prerequisites: **.NET 10 SDK** and **oasdiff** ([install](https://github.com/oas
 
 To browse the API, run `dotnet run --project gateway` and open <http://localhost:5080/swagger>.
 Swagger UI renders the documents the gateway generates from its own code
-(`/openapi/v1.json` and `/openapi/v2.json`, chosen from the dropdown). Unlike the
+(`/openapi/v1.json` and `/openapi/v2.json`, chosen from the dropdown; the same documents
+are also served as `.yaml`). Unlike the
 contract-first demo, the page cannot disagree with the code. Compare it with the
 committed `contracts/` snapshot to see a pending API change.
 
@@ -72,17 +73,44 @@ from the first demo's Experiment 2), runs the gate, then restores the file:
 ```
 ✎ "Harmless refactor": PatientName → FullName in the v1 DTO
 
-▶ v1: committed snapshot → spec exported from current code
+▶ v1 (json): committed snapshot → spec exported from current code
 error  [response-required-property-removed] in API GET /api/v1/studies
        removed the required property `items/patientName` from the response with the `200` status
 error  [response-required-property-removed] in API GET /api/v1/studies/{id}
        removed the required property `patientName` from the response with the `200` status
   ✘ BREAKING change in v1. Revert it, or ship it as a new major (/api/v3 + a new document).
-▶ v2: committed snapshot → spec exported from current code
+▶ v2 (json): committed snapshot → spec exported from current code
   ✔ No API change.
 
 → Caught before merge. In the first demo the same rename shipped and blanked out patient names.
 ```
+
+## JSON or YAML
+
+The gateway serves each spec in both formats, and `export-spec.sh` commits both. The two files
+hold the same document. One setting decides which one the tools **read**:
+
+```
+contracts/spec.env            SPEC_FORMAT=json      ← the committed default
+SPEC_FORMAT=yaml ./scripts/api-gate.sh              ← overrides it for one run
+```
+
+| Tool                         | Reads                                                        |
+|------------------------------|--------------------------------------------------------------|
+| `api-gate.sh` (oasdiff)      | `studies-$doc.$SPEC_FORMAT`                                  |
+| `api-gate.sh` (drift check)  | **both** formats, so the file you do not read cannot go stale |
+| `generate-clients.sh` (Kiota)| `studies-$doc.$SPEC_FORMAT`                                  |
+| `export-spec.sh`             | writes both                                                  |
+
+Try it: run `SPEC_FORMAT=yaml ./scripts/generate-clients.sh`. Only the two
+`client/Generated/*/kiota-lock.json` files change (the spec path and its hash). The generated
+C# is the same, because the client depends on the document and not on its file format.
+
+YAML makes shorter and easier pull-request diffs. JSON is the default of the generator and
+needs no extra tooling to read. Both carry the same generator quirks.
+
+> **This toy keeps both formats for learning.** A real repo picks one, deletes the other,
+> and drops `spec.env`.
 
 ## Where the contract lives in the code
 
@@ -134,7 +162,7 @@ That's the shortcut this toy takes, and the gate is what makes it visible.
 
 ## Alternative: export at build time instead of at runtime
 
-`export-spec.sh` starts the gateway and downloads `/openapi/*.json`. That's simple and has no
+`export-spec.sh` starts the gateway and downloads `/openapi/*.json` and `/openapi/*.yaml`. That's simple and has no
 build magic. ASP.NET Core can also write the documents on every `dotnet build` with the
 `Microsoft.Extensions.ApiDescription.Server` package and an `<OpenApiDocumentsDirectory>`
 property in the csproj. Same idea, earlier feedback. It isn't wired into this demo, so check
