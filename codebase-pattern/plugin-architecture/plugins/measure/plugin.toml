@@ -1,0 +1,8 @@
+id = "measure"
+version = "0.1.0"
+api = 1                              # the host contract this plugin was built for
+
+[[contributes.commands]]
+id = "measure.to-cm"
+title = "Convert mm to cm"
+handler = "measure:to_cm"            # resolved on first run, not at startup

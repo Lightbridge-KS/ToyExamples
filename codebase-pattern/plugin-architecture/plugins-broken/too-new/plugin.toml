@@ -1,0 +1,8 @@
+id = "too-new"
+version = "2.0.0"
+api = 2                              # this host is api 1: rejected before any code is read
+
+[[contributes.commands]]
+id = "measure.to-inch"
+title = "Convert mm to inches"
+handler = "too_new:to_inch"

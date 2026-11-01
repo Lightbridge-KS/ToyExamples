@@ -1,0 +1,13 @@
+id = "impression-tools"
+version = "0.2.0"
+api = 1
+
+[[contributes.commands]]
+id = "impression.extract"
+title = "Extract the impression"
+handler = "impression_tools:extract"
+
+[[contributes.commands]]
+id = "impression.uppercase"
+title = "Uppercase the text"
+handler = "impression_tools:uppercase"   # stale: 0.2.0 renamed the function to shout()

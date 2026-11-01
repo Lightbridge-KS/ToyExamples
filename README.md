@@ -31,6 +31,7 @@ How the code of one program is arranged, and which way its dependencies point.
 
 - Ports & Adapters (one to-do core, swappable storage and notifiers)
 - [Module communication](codebase-pattern/module-communication/README.md) (public APIs, checkout orchestration, and a pub/sub event bus)
+- [Plug-in architecture](codebase-pattern/plugin-architecture/README.md) (manifest-first: the host knows every plugin from its `plugin.toml`, rejects bad ones before any code runs, and imports plugin code only on first use)
 
 ### Design patterns
 

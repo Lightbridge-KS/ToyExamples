@@ -1,0 +1,8 @@
+id = "report-tools"
+version = "0.1.0"
+api = 1
+
+[[contributes.commands]]
+id = "report.word-count"
+title = "Count words"
+handler = "report_tools:word_count"

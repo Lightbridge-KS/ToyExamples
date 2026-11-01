@@ -1,0 +1,19 @@
+# A data-only plugin (a bundle): no Python file, no handler. The host renders the body.
+id = "ct-brain-template"
+version = "0.1.0"
+api = 1
+
+[[contributes.templates]]
+id = "ct-brain"
+title = "CT brain, non-contrast"
+body = """
+EXAMINATION: CT brain without contrast
+TECHNIQUE: Axial 5 mm images from skull base to vertex.
+
+FINDINGS:
+No acute intracranial hemorrhage, mass effect, or midline shift.
+Gray-white matter differentiation is preserved.
+
+IMPRESSION:
+No acute intracranial abnormality.
+"""

@@ -1,0 +1,8 @@
+id = "measure-fork"
+version = "0.1.0"
+api = 1
+
+[[contributes.commands]]
+id = "measure.to-cm"                 # the measure plugin already owns this id
+title = "Convert mm to cm (rounded)"
+handler = "measure_fork:to_cm"

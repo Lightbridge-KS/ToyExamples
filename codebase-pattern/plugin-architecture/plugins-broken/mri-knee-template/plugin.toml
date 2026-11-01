@@ -1,0 +1,9 @@
+id = "mri-knee-template"
+version = "0.1.0"
+api = 1
+
+[[contributes.templates]]
+id = "mri-knee"                      # no title: the templates schema requires one
+body = """
+EXAMINATION: MRI right knee without contrast
+"""
